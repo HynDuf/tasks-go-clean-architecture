@@ -1,0 +1,1 @@
+CREATE DATABASE tasks_go_clean_architecture;
