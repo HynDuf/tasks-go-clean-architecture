@@ -39,18 +39,29 @@ type SignupResponse struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-type restHandler struct {
-	loginUsecase  usecase.LoginUsecase
-	signUpUsecase usecase.SignupUsecase
-	taskUsecase   usecase.TaskUsecase
-	env           *bootstrap.Env
+type RefreshTokenRequest struct {
+	RefreshToken string `form:"refreshToken" binding:"required"`
 }
 
-func NewHandler(loginUsecase usecase.LoginUsecase, signUpUsecase usecase.SignupUsecase, taskUsecase usecase.TaskUsecase) RestHandler {
+type RefreshTokenResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
+type restHandler struct {
+	loginUsecase        usecase.LoginUsecase
+	signUpUsecase       usecase.SignupUsecase
+	taskUsecase         usecase.TaskUsecase
+	refreshTokenUsecase usecase.RefreshTokenUsecase
+	env                 *bootstrap.Env
+}
+
+func NewHandler(loginUsecase usecase.LoginUsecase, signUpUsecase usecase.SignupUsecase, taskUsecase usecase.TaskUsecase, refreshTokenUsecase usecase.RefreshTokenUsecase) RestHandler {
 	return &restHandler{
-		loginUsecase:  loginUsecase,
-		signUpUsecase: signUpUsecase,
-		taskUsecase:   taskUsecase,
+		loginUsecase:        loginUsecase,
+		signUpUsecase:       signUpUsecase,
+		taskUsecase:         taskUsecase,
+		refreshTokenUsecase: refreshTokenUsecase,
 	}
 }
 
@@ -150,6 +161,47 @@ func (h *restHandler) LogIn(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, loginResponse)
+}
+
+func (h *restHandler) RefreshToken(c *gin.Context) {
+	var request RefreshTokenRequest
+
+	err := c.ShouldBind(&request)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	id, err := h.refreshTokenUsecase.ExtractIDFromToken(request.RefreshToken, h.env.RefreshTokenSecret)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "User not found"})
+		return
+	}
+
+	user, err := h.refreshTokenUsecase.GetUserByID(id)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "User not found"})
+		return
+	}
+
+	accessToken, err := h.refreshTokenUsecase.CreateAccessToken(&user, h.env.AccessTokenSecret, h.env.AccessTokenExpiryHour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	refreshToken, err := h.refreshTokenUsecase.CreateRefreshToken(&user, h.env.RefreshTokenSecret, h.env.RefreshTokenExpiryHour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	refreshTokenResponse := RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	c.JSON(http.StatusOK, refreshTokenResponse)
 }
 
 func (h *restHandler) FetchTasks(c *gin.Context) {
