@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -56,12 +57,13 @@ type restHandler struct {
 	env                 *bootstrap.Env
 }
 
-func NewHandler(loginUsecase usecase.LoginUsecase, signUpUsecase usecase.SignupUsecase, taskUsecase usecase.TaskUsecase, refreshTokenUsecase usecase.RefreshTokenUsecase) RestHandler {
+func NewHandler(loginUsecase usecase.LoginUsecase, signUpUsecase usecase.SignupUsecase, taskUsecase usecase.TaskUsecase, refreshTokenUsecase usecase.RefreshTokenUsecase, env *bootstrap.Env) RestHandler {
 	return &restHandler{
 		loginUsecase:        loginUsecase,
 		signUpUsecase:       signUpUsecase,
 		taskUsecase:         taskUsecase,
 		refreshTokenUsecase: refreshTokenUsecase,
+		env:                 env,
 	}
 }
 
@@ -75,7 +77,7 @@ func (h *restHandler) SignUp(c *gin.Context) {
 	}
 
 	_, err = h.signUpUsecase.GetUserByEmail(request.Email)
-	if err == nil {
+	if err != nil {
 		c.JSON(http.StatusConflict, ErrorResponse{Message: "User already exists with the given email"})
 		return
 	}
@@ -92,9 +94,9 @@ func (h *restHandler) SignUp(c *gin.Context) {
 	request.Password = string(encryptedPassword)
 
 	user := entity.User{
-		Name:     request.Name,
-		Email:    request.Email,
-		Password: request.Password,
+		Name:           request.Name,
+		Email:          request.Email,
+		HashedPassword: request.Password,
 	}
 
 	err = h.signUpUsecase.Create(&user)
@@ -103,8 +105,13 @@ func (h *restHandler) SignUp(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := h.signUpUsecase.CreateAccessToken(&user, h.env.AccessTokenSecret, h.env.AccessTokenExpiryHour)
-	if err != nil {
+	fmt.Println("Name", user.Name)
+	fmt.Println("Email", user.Email)
+	fmt.Println("HashedPassword", user.HashedPassword)
+	fmt.Println(h.env.AccessTokenSecret)
+	fmt.Println(h.env.AccessTokenExpiryHour)
+	accessToken, er := h.signUpUsecase.CreateAccessToken(&user, h.env.AccessTokenSecret, h.env.AccessTokenExpiryHour)
+	if er != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 		return
 	}
@@ -138,7 +145,7 @@ func (h *restHandler) LogIn(c *gin.Context) {
 		return
 	}
 
-	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)) != nil {
+	if bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(request.Password)) != nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "Invalid credentials"})
 		return
 	}

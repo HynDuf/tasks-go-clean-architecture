@@ -1,8 +1,6 @@
 package route
 
 import (
-	"os/user"
-
 	"github.com/HynDuf/tasks-go-clean-architecture/bootstrap"
 	"github.com/HynDuf/tasks-go-clean-architecture/internal/delivery/http/handler"
 	"github.com/HynDuf/tasks-go-clean-architecture/internal/delivery/http/middleware"
@@ -24,7 +22,7 @@ func Setup(env *bootstrap.Env, db *gorm.DB, gin *gin.Engine) {
 	signUpUsecase := signup.NewSignupUsecase(userRP)
 	tasksUsecase := tasks.NewTaskUsecase(taskRP)
 	refreshTokenUsecase := refreshtkn.NewRefreshTokenUsecase(userRP)
-	h := handler.NewHandler(loginUsecase, signUpUsecase, tasksUsecase, refreshTokenUsecase)
+	h := handler.NewHandler(loginUsecase, signUpUsecase, tasksUsecase, refreshTokenUsecase, env)
 	publicRouter.POST("/api/signup", h.SignUp)
 	publicRouter.POST("/api/login", h.LogIn)
 	publicRouter.POST("/api/refresh", h.RefreshToken)
