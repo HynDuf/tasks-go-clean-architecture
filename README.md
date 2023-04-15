@@ -10,6 +10,7 @@ Clean architecture typically consists of four layers: entities, use cases, inter
 
 The examples in this repository demonstrate the implementation of Clean Architecture in Golang.
 ### Architecture Layers
+![architecture](assets/architecture.png)
 ### Folder Structure
 ```
 tasks-go-clean-architecture
@@ -29,7 +30,7 @@ tasks-go-clean-architecture
 ├── internal
 │   ├── delivery
 │   │   └── http
-│   │       ├── handler       -> Outermost layer driving the business logic
+│   │       ├── handler       -> outermost layer driving the business logic
 │   │       │   ├── handler.go
 │   │       │   └── interface.go
 │   │       ├── middleware
