@@ -1,6 +1,7 @@
 package userrepo
 
 import (
+    "errors"
 	"time"
 
 	"github.com/HynDuf/tasks-go-clean-architecture/internal/domain/entity"
@@ -29,7 +30,15 @@ func (ur *userRepository) Create(user *entity.User) error {
 }
 
 func (ur *userRepository) GetByEmail(email string) (entity.User, error) {
-	return entity.User{}, nil
+	userModel := UserModel{}
+	err := ur.db.Table(ur.tableName).Where("email = ?", email).First(&userModel).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entity.User{}, repository.ErrUserNotFound
+		}
+		return entity.User{}, err
+	}
+	return *userModel.ToUserEntity(), nil
 }
 
 func (ur *userRepository) GetByID(id string) (entity.User, error) {

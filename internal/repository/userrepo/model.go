@@ -23,3 +23,11 @@ func (UserModel) FromUserEntity(u entity.User) *UserModel {
 	}
 }
 
+func (u *UserModel) ToUserEntity() *entity.User {
+	return &entity.User{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+        HashedPassword: u.HashedPassword,
+	}
+}
